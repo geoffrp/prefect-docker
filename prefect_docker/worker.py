@@ -91,6 +91,9 @@ class DockerWorkerJobConfiguration(BaseJobConfiguration):
             allowing the container to use as much swap as memory. For example, if
             `mem_limit` is 300m and `memswap_limit` is not set, containers can use
             600m in total of memory and swap.
+        run_options: Additional options to pass to the Docker API when creating
+            containers.  See the Docker SDK documentation for more information
+            (https://docker-py.readthedocs.io/en/stable/containers.html).
         privileged: Give extended privileges to created containers.
     """
 
@@ -151,7 +154,14 @@ class DockerWorkerJobConfiguration(BaseJobConfiguration):
             "600m in total of memory and swap."
         ),
     )
-
+    run_options: Optional[Dict[str, Optional[str]]] = Field(
+        default_factory=dict,
+        description=(
+            "Additional options to pass to the Docker API when creating containers. "
+            "See the Docker SDK documentation for more information "
+            "(https://docker-py.readthedocs.io/en/stable/containers.html)."
+        ),
+    )
     privileged: bool = Field(
         default=False,
         description="Give extended privileges to created container.",
@@ -523,6 +533,7 @@ class DockerWorker(BaseWorker):
             mem_limit=configuration.mem_limit,
             memswap_limit=configuration.memswap_limit,
             privileged=configuration.privileged,
+            **configuration.run_options,
         )
 
     def _create_and_start_container(
@@ -694,7 +705,6 @@ class DockerWorker(BaseWorker):
         name = original_name = kwargs.pop("name")
 
         while not container:
-
             try:
                 display_name = repr(name) if name else "with auto-generated name"
                 self._logger.info(f"Creating Docker container {display_name}...")
